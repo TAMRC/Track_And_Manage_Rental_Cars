@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app)  # Active CORS pour toutes les routes
 
 UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -19,10 +21,6 @@ def upload_pdf():
     message = "Fichier PDF traité avec succès."
 
     return jsonify({'message': message})
-
-@app.route('/health')
-def health_check():
-    return "OK", 200
 
 if __name__ == "__main__":
     app.run(debug=True)
