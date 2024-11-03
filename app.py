@@ -17,10 +17,13 @@ def upload_pdf():
     pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_file.filename)
     pdf_file.save(pdf_path)
 
-    # Code Python à exécuter sur le PDF, comme l'analyse ou la génération de rapport
     message = "Fichier PDF traité avec succès."
-
     return jsonify({'message': message})
+
+# Ajout de la route de santé
+@app.route('/health')
+def health_check():
+    return "OK", 200
 
 if __name__ == "__main__":
     app.run(debug=True)
