@@ -13,3 +13,11 @@ urllib3==2.2.3
 Werkzeug==3.1.0
 gunicorn
 flask_cors
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+pdfplumber
+pandas
+
+
