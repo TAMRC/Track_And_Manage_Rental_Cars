@@ -9,6 +9,7 @@ import pandas as pd
 import re
 import datetime as dt
 from flask_cors import CORS
+import logging
 
 app = Flask(__name__)
 CORS(app)  # Activer CORS pour toutes les routes
@@ -28,11 +29,18 @@ def authenticate_google_drive():
 @app.route('/list_files', methods=['GET'])
 def list_files_in_folder():
     folder_id = request.args.get('folder_id')
+    
+    # Vérifier si le folder_id contient une URL et extraire seulement l'ID
+    if "drive.google.com" in folder_id:
+        # Extraire l'ID du dossier à partir de l'URL
+        folder_id = folder_id.split('/')[-1]
+    
     if not folder_id:
-        print("Erreur: 'folder_id' manquant dans la requête.")
+        logging.error("Erreur: 'folder_id' manquant dans la requête.")
         return jsonify({'error': 'folder_id is required'}), 400
 
-    print(f"Tentative de récupération des fichiers du dossier avec l'ID: {folder_id}")
+    logging.info(f"Tentative de récupération des fichiers du dossier avec l'ID: {folder_id}")
+    
     service = authenticate_google_drive()
     all_files = []
     query = f"'{folder_id}' in parents and trashed=false"
@@ -47,16 +55,14 @@ def list_files_in_folder():
                 orderBy="modifiedTime desc",
                 pageToken=page_token
             ).execute()
-            files = response.get('files', [])
-            print(f"{len(files)} fichiers récupérés lors de cette itération.")
-            all_files.extend(files)
+            all_files.extend(response.get('files', []))
             page_token = response.get('nextPageToken', None)
             if page_token is None:
                 break
-        print(f"Total des fichiers récupérés: {len(all_files)}")
+        logging.info(f"Récupération réussie de {len(all_files)} fichiers.")
         return jsonify(all_files)
     except Exception as e:
-        print(f"Erreur lors de la récupération des fichiers : {e}")
+        logging.error(f"Erreur lors de la récupération des fichiers : {e}")
         return jsonify({'error': str(e)}), 500
 
 # Endpoint pour télécharger et analyser un fichier PDF
