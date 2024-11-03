@@ -21,6 +21,7 @@ def authenticate_google_drive():
     creds = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     service = build('drive', 'v3', credentials=creds)
+    print("Authentification à Google Drive réussie.")
     return service
 
 # Endpoint pour lister les fichiers dans un dossier Google Drive
@@ -28,8 +29,10 @@ def authenticate_google_drive():
 def list_files_in_folder():
     folder_id = request.args.get('folder_id')
     if not folder_id:
+        print("Erreur: 'folder_id' manquant dans la requête.")
         return jsonify({'error': 'folder_id is required'}), 400
 
+    print(f"Tentative de récupération des fichiers du dossier avec l'ID: {folder_id}")
     service = authenticate_google_drive()
     all_files = []
     query = f"'{folder_id}' in parents and trashed=false"
@@ -44,12 +47,16 @@ def list_files_in_folder():
                 orderBy="modifiedTime desc",
                 pageToken=page_token
             ).execute()
-            all_files.extend(response.get('files', []))
+            files = response.get('files', [])
+            print(f"{len(files)} fichiers récupérés lors de cette itération.")
+            all_files.extend(files)
             page_token = response.get('nextPageToken', None)
             if page_token is None:
                 break
+        print(f"Total des fichiers récupérés: {len(all_files)}")
         return jsonify(all_files)
     except Exception as e:
+        print(f"Erreur lors de la récupération des fichiers : {e}")
         return jsonify({'error': str(e)}), 500
 
 # Endpoint pour télécharger et analyser un fichier PDF
@@ -57,8 +64,10 @@ def list_files_in_folder():
 def download_and_extract():
     file_id = request.json.get('file_id')
     if not file_id:
+        print("Erreur: 'file_id' manquant dans la requête.")
         return jsonify({'error': 'file_id is required'}), 400
 
+    print(f"Tentative de téléchargement et d'extraction du fichier avec l'ID: {file_id}")
     service = authenticate_google_drive()
     request_drive = service.files().get_media(fileId=file_id)
     file_path = os.path.join('/tmp', f"{file_id}.pdf")
@@ -70,13 +79,15 @@ def download_and_extract():
             done = False
             while not done:
                 status, done = downloader.next_chunk()
-                print(f"Download {int(status.progress() * 100)}% complete.")
+                print(f"Téléchargement {int(status.progress() * 100)}% complet.")
         
         # Extraire les informations du PDF
         doc_num, immat_info = extract_info_from_pdf(file_path)
         os.remove(file_path)  # Supprimer le fichier après extraction
+        print(f"Extraction terminée : doc_num={doc_num}, immat_info={immat_info}")
         return jsonify({'doc_num': doc_num, 'immat_info': immat_info})
     except Exception as e:
+        print(f"Erreur lors du téléchargement ou de l'extraction : {e}")
         return jsonify({'error': str(e)}), 500
 
 def extract_info_from_pdf(file_path):
@@ -85,12 +96,10 @@ def extract_info_from_pdf(file_path):
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
                 text = page.extract_text()
-
                 # Extraction du numéro de document
                 if not doc_num:
                     doc_num_match = re.search(r'N° du document :\s*([\w-]+)', text)
                     doc_num = doc_num_match.group(1) if doc_num_match else None
-
                 # Extraction de l'immatriculation
                 immat_match = re.search(r'NICE AEROPORT\s(.*?)(?=\n)', text)
                 if immat_match and not immat_info:
@@ -98,6 +107,7 @@ def extract_info_from_pdf(file_path):
                     immat_info = re.sub(r'NICE AEROPORT|CAGNES SUR MER|NICE', '', immat_info, flags=re.IGNORECASE).strip()
                     immat_info = immat_info.replace(' ', '-')
         
+        print(f"Informations extraites du PDF : doc_num={doc_num}, immat_info={immat_info}")
         return doc_num, immat_info
     except Exception as e:
         print(f"Erreur lors de l'extraction des informations du fichier {file_path}: {e}")
