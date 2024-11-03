@@ -8,11 +8,13 @@ import pdfplumber
 import pandas as pd
 import re
 import datetime as dt
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Activer CORS pour toutes les routes
 
-# Chemin du fichier JSON des identifiants du compte de service
-SERVICE_ACCOUNT_FILE = '/etc/secrets/service_account.json'  # Assurez-vous d'ajouter le fichier comme secret sur Render
+# Chemin vers le fichier JSON du compte de service
+SERVICE_ACCOUNT_FILE = '/etc/secrets/service_account.json'
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 def authenticate_google_drive():
@@ -100,6 +102,11 @@ def extract_info_from_pdf(file_path):
     except Exception as e:
         print(f"Erreur lors de l'extraction des informations du fichier {file_path}: {e}")
         return None, None
+
+# Endpoint de santé pour Render
+@app.route('/health', methods=['GET'])
+def health_check():
+    return "OK", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
